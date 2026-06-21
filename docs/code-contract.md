@@ -11,8 +11,26 @@
 
 Question 和 Scorecard 字段以 `packages/contracts/src/*.ts` 为唯一事实源，文档不重复列字段。
 
-任何 app 都不能重新定义 `Question`、`Scorecard`、`questionSchema` 或
-`scorecardSchema`.
+任何 app（当前 `apps/web`，未来 `apps/api`、`apps/miniapp`）都不能重新定义
+`Question`、`Scorecard`、`questionSchema` 或 `scorecardSchema`.
+
+## 架构标准
+
+本仓库采用 `Contract-first + Domain Core + Feature-first Web`。
+
+固定数据链路：
+
+```text
+DTO / Raw Data
+  -> Mapper
+  -> Domain Model
+  -> ViewModel Mapper
+  -> UI Model
+  -> Naive UI
+```
+
+`QuestionDto` 只允许出现在 DTO、API 或 mapper 边界。页面组件和 UI 组件不能直接消费
+DTO；进入 UI 前必须先转换成 Domain Model，再映射成 UI Model / ViewModel。
 
 ## 模块边界
 
@@ -23,6 +41,16 @@ Question 和 Scorecard 字段以 `packages/contracts/src/*.ts` 为唯一事实�
 
 `apps/web` 可以从 `@jiku/contracts` 和 `@jiku/content` 导入。页面文件只负责组合 UI
 和数据，不负责 storage、schema 或内容规则。
+
+未来 `apps/api` 和 `apps/miniapp` 也只能引用 `@jiku/contracts`，不能维护自己的核心
+DTO、schema 或字段副本。
+
+`packages/domain` 只放业务纯函数。它不能依赖 Vue、Naive UI、router 或
+`localStorage`。
+
+`apps/web/src/features` 按业务垂直切片组织前端功能。`apps/web/src/shared/ui` 放基于
+Naive UI 的全局共享组件。不要把主结构横向堆成 `components/`、`stores/`、
+`mappers/`、`models/`。
 
 ## 抽象规则
 
@@ -39,9 +67,12 @@ Question 和 Scorecard 字段以 `packages/contracts/src/*.ts` 为唯一事实�
 - private/local 内容不能进入 git 可见文件
 - Phase 1 内容必须是 free-only
 - `localStorage` 只能出现在 `apps/web/src/storage`
-- app/content 代码不能重新定义 `Question`
-- content 代码不能定义第二套 question schema
-- category/topic 不能在 app 源码里硬编码数组
+- app/content 代码不能重新定义 `Question`、`Scorecard`
+- app/content 代码不能定义第二套 question/scorecard schema
+- `QuestionDto` 不能进入页面和 UI 组件
+- category/topic/tag 不能在 app 源码里硬编码数组
+- `packages/domain` 不能依赖 UI、router 或浏览器存储
+- `apps/web/src` 不能新增横向主结构 `components/`、`stores/`、`mappers/`、`models/`
 - 不能新增 `common/` 或 `utils.ts` 垃圾桶
 
 ## 风格
