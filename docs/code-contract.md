@@ -52,6 +52,9 @@ DTO、schema 或字段副本。
 Naive UI 的全局共享组件。不要把主结构横向堆成 `components/`、`stores/`、
 `mappers/`、`models/`。
 
+`shared/ui` 不知道 `Question`、`Scorecard` 等业务类型；业务展示字段必须先由 feature
+mapper 转成 ViewModel。
+
 ## 抽象规则
 
 - 第一次出现：直接写。

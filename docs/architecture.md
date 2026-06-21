@@ -42,6 +42,71 @@ DTO 只能停留在 API、DTO 和 mapper 边界，不能直接进入页面或 UI
 的全局共享组件入口。不要新增 `components/`、`stores/`、`mappers/`、`models/` 作为主
 结构。
 
+Phase 1 Web 目录标准：
+
+```text
+apps/web/src/
+  app/
+  shared/
+    ui/
+    layout/
+    format/
+  features/
+    questions/
+    practice/
+    scorecard/
+    review/
+    import-export/
+```
+
+每个 feature 默认结构：
+
+```text
+features/<feature>/
+  pages/
+  models/
+  mappers/
+  routes.ts
+  store.ts      # 仅需要时
+  components/  # 仅例外时
+```
+
+feature 内部 `components/` 是例外，不是默认。只有页面太长、某块只属于当前业务、
+拆出来更易读时才允许。`Button`、`Card`、`Tag`、`StatCard` 这类通用组件必须放
+`shared/ui`。
+
+## UI 标准
+
+- UI 框架固定为 Naive UI。
+- 使用 `NConfigProvider`、`NMessageProvider`、`NDialogProvider` 建立 app providers。
+- Naive UI 主题入口统一放在 `apps/web/src/app/naiveTheme.ts` 或等价 app 入口。
+- 根目录 `DESIGN.md` 是 Vercel-inspired 视觉事实源。
+- `shared/ui` 是全局设计系统，不知道 `Question`、`Scorecard` 等业务类型。
+- 页面默认用 `shared/ui` 和 feature ViewModel 组装。
+- 普通 `NInput`、`NSelect`、`NButton` 可以直接使用，除非需要统一语义。
+- 不引入 Tailwind、Element Plus、Ant Design Vue 等第二套 UI 或样式框架。
+
+## Mapper 和 ViewModel
+
+固定链路仍然是：
+
+```text
+DTO / Raw Data
+  -> Mapper
+  -> Domain Model
+  -> ViewModel Mapper
+  -> UI Model
+  -> Naive UI
+```
+
+- DTO 不允许直接进入 UI。
+- Domain Model 来自 `packages/contracts`。
+- 业务纯函数放 `packages/domain`。
+- Feature mapper 负责 `Domain -> ViewModel`。
+- ViewModel 可以包含展示文案、tag 类型、按钮禁用状态等 UI 所需字段。
+- 页面不直接格式化 score、status、category 文案。
+- 当前阶段不写假的后端 DTO，也不为未来后端提前生成 API client。
+
 ## 当前范围
 
 Phase 1 不做后端、登录、支付、VIP 授权、管理后台和私有商业题库内容。
