@@ -12,6 +12,16 @@ body:
     validations:
       required: true
   - type: textarea
+    id: facts
+    attributes:
+      label: 事实源引用
+      description: 列出本议题引用的事实源，例如 docs/product.md、docs/roadmap.md、docs/pricing.md、docs/code-contract.md 或 docs/content-safety.md。
+      value: |
+        - docs/product.md
+        - docs/roadmap.md
+    validations:
+      required: true
+  - type: textarea
     id: scope
     attributes:
       label: 范围
