@@ -7,13 +7,22 @@ export const scoreRecordSchema = z
     questionId: z.string().trim().min(1),
     latestScore: z.number().min(0).max(10),
     bestScore: z.number().min(0).max(10),
-    attempts: z.number().int().min(0),
+    attempts: z.number().int().min(1),
     status: scoreStatusSchema,
     weakPoints: z.array(z.string().trim().min(1)),
     lastFeedback: z.string(),
     lastPracticedAt: z.string().datetime()
   })
-  .strict();
+  .strict()
+  .superRefine((record, context) => {
+    if (record.bestScore < record.latestScore) {
+      context.addIssue({
+        code: "custom",
+        message: "bestScore must be greater than or equal to latestScore",
+        path: ["bestScore"]
+      });
+    }
+  });
 
 export const scorecardSchema = z
   .object({
@@ -21,7 +30,18 @@ export const scorecardSchema = z
     updatedAt: z.string().datetime(),
     records: z.record(z.string().trim().min(1), scoreRecordSchema)
   })
-  .strict();
+  .strict()
+  .superRefine((scorecard, context) => {
+    for (const [recordId, record] of Object.entries(scorecard.records)) {
+      if (record.questionId !== recordId) {
+        context.addIssue({
+          code: "custom",
+          message: "record key must match questionId",
+          path: ["records", recordId, "questionId"]
+        });
+      }
+    }
+  });
 
 export type ScoreStatus = z.infer<typeof scoreStatusSchema>;
 export type ScoreRecord = z.infer<typeof scoreRecordSchema>;
