@@ -1,0 +1,1 @@
+export { isPassingScore } from "./questionScoring";
