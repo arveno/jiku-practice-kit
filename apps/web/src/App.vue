@@ -1,3 +1,12 @@
+<script setup lang="ts">
+import AppProviders from "./app/AppProviders.vue";
+import AppShell from "./shared/layout/AppShell.vue";
+</script>
+
 <template>
-  <RouterView />
+  <AppProviders>
+    <AppShell>
+      <RouterView />
+    </AppShell>
+  </AppProviders>
 </template>
