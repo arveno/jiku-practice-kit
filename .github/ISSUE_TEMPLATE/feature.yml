@@ -1,0 +1,43 @@
+name: Feature
+description: 创建一个需要实现的新功能议题
+title: "[Feature] "
+labels:
+  - feature
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: 目标
+      description: 这个议题要解决什么问题？
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 范围
+      description: 明确包含和不包含的内容。
+    validations:
+      required: true
+  - type: textarea
+    id: contract
+    attributes:
+      label: 合同影响
+      description: 是否需要修改 packages/contracts？如果不需要，说明原因。
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      description: 列出可验证的完成条件。
+    validations:
+      required: true
+  - type: textarea
+    id: checks
+    attributes:
+      label: 必跑检查
+      value: |
+        - [ ] pnpm run ci
+        - [ ] 本地代码审核
+    validations:
+      required: true

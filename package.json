@@ -1,0 +1,37 @@
+{
+  "name": "jiku-practice-kit",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.8.1",
+  "scripts": {
+    "dev": "pnpm --filter @jiku/web dev",
+    "build": "pnpm -r build",
+    "preview": "pnpm --filter @jiku/web preview",
+    "typecheck": "pnpm -r typecheck && tsc -p tsconfig.scripts.json --noEmit",
+    "lint": "eslint .",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "test": "vitest run",
+    "validate:contracts": "tsx scripts/validateContracts.ts",
+    "validate:questions": "tsx scripts/validateQuestions.ts",
+    "guard:architecture": "tsx scripts/guardArchitecture.ts",
+    "ci": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm validate:contracts && pnpm validate:questions && pnpm build && pnpm guard:architecture"
+  },
+  "dependencies": {
+    "@jiku/content": "workspace:*",
+    "@jiku/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "26.0.0",
+    "eslint": "10.5.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-vue": "10.9.2",
+    "prettier": "3.8.4",
+    "tsx": "4.22.4",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.61.1",
+    "vitest": "4.1.9"
+  }
+}
