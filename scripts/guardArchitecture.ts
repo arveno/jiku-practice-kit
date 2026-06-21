@@ -35,6 +35,53 @@ function isTypeScriptOrVue(file: string) {
   return file.endsWith(".ts") || file.endsWith(".vue");
 }
 
+function isTextContentFile(file: string) {
+  return /\.(?:cjs|js|json|md|mjs|ts|tsx|vue)$/.test(file);
+}
+
+function isPaidAnswerScanTarget(file: string) {
+  return (
+    isTextContentFile(file) &&
+    !file.startsWith("docs/") &&
+    !file.startsWith("scripts/") &&
+    !file.endsWith(".test.ts")
+  );
+}
+
+function isScorecardDataFile(file: string) {
+  const segments = file.split("/");
+  const basename = segments[segments.length - 1] ?? file;
+
+  return (
+    file.startsWith("scorecards/") ||
+    /^scorecard\.(?:json|md)$/.test(basename) ||
+    /\.scorecard\.(?:json|md)$/.test(basename)
+  );
+}
+
+function containsPaidAnswerLeak(content: string) {
+  return (
+    /\b(?:paid|vip|premium)(?:Answer|_answer)\b/i.test(content) ||
+    /["']?accessLevel["']?\s*:\s*["'](?:paid|vip|premium)["']/.test(content)
+  );
+}
+
+function referencesForbiddenPrivateLocalPath(content: string) {
+  return (
+    content.includes(".local/") ||
+    content.includes("private/") ||
+    content.includes("packages/content/src/private") ||
+    content.includes("src/content/questions/private")
+  );
+}
+
+function referencesScorecardData(content: string) {
+  return (
+    /(?:^|["'`/])scorecards\//.test(content) ||
+    /(?:^|["'`/])(?:[^"'`/]*\.)?scorecard\.(?:json|md)\b/.test(content)
+  );
+}
+
 function parsePackageJson(content: string) {
   return JSON.parse(content) as {
     dependencies?: Record<string, string>;
@@ -98,6 +145,17 @@ export function findArchitectureFailures(
       failures.push(
         `forbidden generated/private/local file is visible to git: ${file}`
       );
+    }
+
+    if (isScorecardDataFile(file)) {
+      failures.push(`scorecard data file must stay out of git-visible files: ${file}`);
+    }
+
+    if (
+      isPaidAnswerScanTarget(file) &&
+      containsPaidAnswerLeak(fileContent(projectFile))
+    ) {
+      failures.push(`paid answer content must stay out of git-visible files: ${file}`);
     }
 
     if (file.endsWith("package.json")) {
@@ -224,11 +282,19 @@ export function findArchitectureFailures(
 
   for (const file of distFiles) {
     const content = fileContent(file);
-    if (
-      content.includes("packages/content/src/private") ||
-      content.includes("src/content/questions/private")
-    ) {
-      failures.push(`build output references private content path: ${file.path}`);
+    if (referencesForbiddenPrivateLocalPath(content)) {
+      failures.push(
+        `build output references forbidden private/local path: ${file.path}`
+      );
+      continue;
+    }
+
+    if (referencesScorecardData(content)) {
+      failures.push(`build output references scorecard data: ${file.path}`);
+    }
+
+    if (containsPaidAnswerLeak(content)) {
+      failures.push(`build output references paid answer content: ${file.path}`);
     }
   }
 
