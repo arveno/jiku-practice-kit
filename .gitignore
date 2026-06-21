@@ -11,5 +11,9 @@ coverage/
 private/
 src/content/questions/private/
 packages/content/src/private/
+scorecard.json
+scorecards/
+*.scorecard.json
+*.scorecard.md
 *.local.json
 *.local.md
