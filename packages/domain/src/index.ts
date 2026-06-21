@@ -7,3 +7,4 @@ export {
   type QuestionStats
 } from "./questionFilters";
 export { isPassingScore } from "./questionScoring";
+export { getScorecardStats, type ScorecardStats } from "./scorecardStats";

@@ -18,7 +18,7 @@ Phase 1：合同优先的免费静态题库。当前仓库只交付前端静态�
 - 使用 `packages/contracts` 作为 Question 和 Scorecard 的唯一事实源。
 - 使用 `packages/content` 提供 free-only 公开题库。
 - 使用 `apps/web` 渲染静态刷题体验。
-- 只在 `apps/web/src/storage` 访问浏览器存储。
+- 只在 `apps/web/src/features/scorecard/storage.ts` 访问浏览器存储。
 - 用 `pnpm run ci` 作为提交和 PR 前的本地门禁。
 
 ## 当前不做什么

@@ -12,6 +12,7 @@
   "dependencies": {
     "@jiku/content": "workspace:*",
     "@jiku/contracts": "workspace:*",
+    "@jiku/domain": "workspace:*",
     "@vitejs/plugin-vue": "6.0.7",
     "naive-ui": "2.44.1",
     "pinia": "3.0.4",
