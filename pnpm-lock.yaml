@@ -88,6 +88,12 @@ importers:
         specifier: 4.4.3
         version: 4.4.3
 
+  packages/domain:
+    dependencies:
+      '@jiku/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+
 packages:
 
   '@babel/generator@8.0.0':
