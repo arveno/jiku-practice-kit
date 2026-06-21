@@ -13,4 +13,19 @@ describe("allQuestions", () => {
     const ids = allQuestions.map((question) => question.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
+
+  it("covers the Phase 1 demo categories", () => {
+    const categories = new Set(allQuestions.map((question) => question.category));
+
+    for (const category of [
+      "TypeScript",
+      "JavaScript",
+      "Vue",
+      "React",
+      "Cocos",
+      "AI Agent"
+    ]) {
+      expect(categories.has(category)).toBe(true);
+    }
+  });
 });

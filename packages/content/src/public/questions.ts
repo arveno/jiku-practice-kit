@@ -130,6 +130,55 @@ export const publicQuestions = [
     }
   },
   {
+    id: "react-state-rerender",
+    title: "Explain React state updates and re-rendering.",
+    category: "React",
+    topic: "Rendering",
+    tags: ["react", "state", "rendering"],
+    difficulty: "medium",
+    frequency: "high",
+    accessLevel: "free",
+    products: ["web"],
+    question:
+      "What happens when a React component schedules a state update, and how can you avoid unnecessary renders?",
+    standardAnswer:
+      "React schedules work for the component tree, re-runs affected component functions to produce the next UI, reconciles the result with the previous tree, and commits the necessary host updates. To avoid unnecessary renders, keep state close to where it is used, derive simple values during render, preserve stable keys, and reserve memoization for measured expensive work or stable child props.",
+    keyPoints: [
+      { text: "Explains scheduled update and re-render", weight: 3 },
+      { text: "Mentions reconciliation and commit", weight: 3 },
+      { text: "Recommends local state and derived values", weight: 2 },
+      { text: "Uses memoization only when justified", weight: 2 }
+    ],
+    followUps: ["When would React.memo help, and when would it be noise?"],
+    commonMistakes: ["Assuming every re-render causes a full DOM replacement."],
+    scoring: {
+      totalScore: 10,
+      passScore: 6,
+      dimensions: [
+        {
+          name: "Update model",
+          score: 3,
+          description: "Explains scheduled state updates and re-rendering."
+        },
+        {
+          name: "Reconciliation",
+          score: 3,
+          description: "Mentions comparison and commit work."
+        },
+        {
+          name: "State design",
+          score: 2,
+          description: "Keeps state close and derives simple values."
+        },
+        {
+          name: "Optimization",
+          score: 2,
+          description: "Uses memoization only for clear cost or stable props."
+        }
+      ]
+    }
+  },
+  {
     id: "cocos-node-component",
     title: "Explain Node and Component in Cocos Creator.",
     category: "Cocos",
