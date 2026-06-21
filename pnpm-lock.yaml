@@ -54,6 +54,9 @@ importers:
       '@jiku/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@jiku/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@vitejs/plugin-vue':
         specifier: 6.0.7
         version: 6.0.7(vite@8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0))(vue@3.5.38(typescript@6.0.3))

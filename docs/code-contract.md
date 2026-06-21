@@ -7,7 +7,7 @@
 - Question schema：`packages/contracts/src/question.ts`
 - Scorecard schema：`packages/contracts/src/scorecard.ts`
 - 免费公开题库：`packages/content/src/public/questions.ts`
-- 浏览器存储边界：`apps/web/src/storage`
+- 浏览器存储边界：`apps/web/src/features/scorecard/storage.ts`
 
 Question 和 Scorecard 字段以 `packages/contracts/src/*.ts` 为唯一事实源，文档不重复列字段。
 
@@ -48,6 +48,10 @@ DTO、schema 或字段副本。
 `packages/domain` 只放业务纯函数。它不能依赖 Vue、Naive UI、router 或
 `localStorage`。
 
+浏览器本地 scorecard 存储只能放在
+`apps/web/src/features/scorecard/storage.ts`。页面、组件、store 和其他 feature 文件不
+直接访问 `localStorage`。
+
 `apps/web/src/features` 按业务垂直切片组织前端功能。`apps/web/src/shared/ui` 放基于
 Naive UI 的全局共享组件。不要把主结构横向堆成 `components/`、`stores/`、
 `mappers/`、`models/`。
@@ -69,7 +73,7 @@ mapper 转成 ViewModel。
 
 - private/local 内容不能进入 git 可见文件
 - Phase 1 内容必须是 free-only
-- `localStorage` 只能出现在 `apps/web/src/storage`
+- `localStorage` 只能出现在 `apps/web/src/features/scorecard/storage.ts`
 - app/content 代码不能重新定义 `Question`、`Scorecard`
 - app/content 代码不能定义第二套 question/scorecard schema
 - `QuestionDto` 不能进入页面和 UI 组件

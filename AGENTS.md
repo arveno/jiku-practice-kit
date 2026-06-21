@@ -33,5 +33,5 @@ desktop。写代码或审查代码时使用 `@ponytail` 或 `@ponytail-review`�
 - `packages/contracts` 是共享 schema 和核心类型的唯一来源。
 - `packages/content` 负责免费题库内容和内容加载。
 - `apps/web` 只能消费 contracts 和 content，不能重新定义核心模型。
-- 浏览器存储访问只能放在 `apps/web/src/storage`。
+- 浏览器存储访问只能放在 `apps/web/src/features/scorecard/storage.ts`。
 - Phase 1 只允许 free 内容。

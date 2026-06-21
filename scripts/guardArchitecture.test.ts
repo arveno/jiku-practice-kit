@@ -41,6 +41,34 @@ describe("findArchitectureFailures", () => {
     ]);
   });
 
+  test("allows localStorage only in the scorecard feature storage boundary", () => {
+    expect(
+      findArchitectureFailures([
+        {
+          path: "apps/web/src/features/scorecard/storage.ts",
+          content: "localStorage.getItem('scorecard')"
+        }
+      ])
+    ).toEqual([]);
+
+    const failures = findArchitectureFailures([
+      {
+        path: "apps/web/src/storage/scorecardStorage.ts",
+        content: "localStorage.getItem('scorecard')"
+      },
+      {
+        path: "apps/web/src/pages/HomePage.vue",
+        content: "localStorage.getItem('scorecard')"
+      }
+    ]);
+
+    expect(failures).toEqual([
+      "localStorage access must stay in apps/web/src/features/scorecard/storage.ts: apps/web/src/storage/scorecardStorage.ts",
+      "web source must use feature-first storage instead of apps/web/src/storage: apps/web/src/storage/scorecardStorage.ts",
+      "localStorage access must stay in apps/web/src/features/scorecard/storage.ts: apps/web/src/pages/HomePage.vue"
+    ]);
+  });
+
   test("rejects scorecard and paid answer leaks in git-visible files", () => {
     const failures = findArchitectureFailures(
       [

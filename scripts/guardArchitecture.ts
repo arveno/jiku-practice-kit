@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { allQuestions } from "@jiku/content";
 
 const root = process.cwd();
+const scorecardStorageBoundary = "apps/web/src/features/scorecard/storage.ts";
 
 export type ProjectFile = {
   path: string;
@@ -178,11 +179,10 @@ export function findArchitectureFailures(
     if (isAppSource(file) && isTypeScriptOrVue(file)) {
       const content = fileContent(projectFile);
 
-      if (
-        content.includes("localStorage") &&
-        !file.startsWith("apps/web/src/storage/")
-      ) {
-        failures.push(`localStorage access must stay in apps/web/src/storage: ${file}`);
+      if (content.includes("localStorage") && file !== scorecardStorageBoundary) {
+        failures.push(
+          `localStorage access must stay in ${scorecardStorageBoundary}: ${file}`
+        );
       }
 
       if (/^\s*(?:export\s+)?(?:type|interface)\s+Question\b/m.test(content)) {
@@ -230,6 +230,12 @@ export function findArchitectureFailures(
     ) {
       failures.push(
         `web source must use feature-first structure instead of horizontal buckets: ${file}`
+      );
+    }
+
+    if (file.startsWith("apps/web/src/storage/")) {
+      failures.push(
+        `web source must use feature-first storage instead of apps/web/src/storage: ${file}`
       );
     }
 
@@ -307,7 +313,9 @@ function workspaceFiles(): ProjectFile[] {
       ...gitFiles(["ls-files"]),
       ...gitFiles(["ls-files", "--others", "--exclude-standard"])
     ])
-  ).map((path) => ({ path }));
+  )
+    .filter((path) => existsSync(join(root, path)))
+    .map((path) => ({ path }));
 }
 
 function distFiles(): ProjectFile[] {
