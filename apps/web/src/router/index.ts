@@ -1,10 +1,10 @@
 import { createRouter, createWebHashHistory } from "vue-router";
 import HomePage from "../features/home/HomePage.vue";
+import DatabasePage from "../features/database/DatabasePage.vue";
 import PracticePage from "../features/practice/PracticePage.vue";
 import QuestionDetailPage from "../features/questions/QuestionDetailPage.vue";
 import QuestionsPage from "../features/questions/QuestionsPage.vue";
 import ReviewPage from "../features/review/ReviewPage.vue";
-import ImportExportPage from "../features/scorecard/ImportExportPage.vue";
 
 export const router = createRouter({
   history: createWebHashHistory(),
@@ -18,6 +18,7 @@ export const router = createRouter({
     },
     { path: "/practice", name: "practice", component: PracticePage },
     { path: "/review", name: "review", component: ReviewPage },
-    { path: "/import-export", name: "import-export", component: ImportExportPage }
+    { path: "/data", name: "data", component: DatabasePage },
+    { path: "/import-export", redirect: "/data" }
   ]
 });

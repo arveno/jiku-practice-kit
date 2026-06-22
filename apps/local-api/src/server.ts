@@ -16,6 +16,11 @@ export function createLocalApiServer(store: LocalDatabaseStore) {
         return;
       }
 
+      if (request.method === "GET" && url.pathname === "/database/summary") {
+        sendJson(response, 200, await readDatabaseSummary(store));
+        return;
+      }
+
       if (request.method === "GET" && url.pathname === "/sessions/active") {
         const session = await store.readActiveSession();
         sendJson(
@@ -48,6 +53,11 @@ export function createLocalApiServer(store: LocalDatabaseStore) {
         return;
       }
 
+      if (request.method === "GET" && url.pathname === "/question-progress") {
+        sendJson(response, 200, await store.readQuestionProgressList());
+        return;
+      }
+
       const progressMatch = url.pathname.match(/^\/question-progress\/([^/]+)$/);
       if (progressMatch?.[1] && request.method === "GET") {
         const progress = await store.readQuestionProgress(
@@ -66,6 +76,18 @@ export function createLocalApiServer(store: LocalDatabaseStore) {
         return;
       }
 
+      if (request.method === "GET" && url.pathname === "/review-schedules") {
+        sendJson(response, 200, await store.readReviewSchedules());
+        return;
+      }
+
+      const reviewScheduleMatch = url.pathname.match(/^\/review-schedules\/([^/]+)$/);
+      if (reviewScheduleMatch?.[1] && request.method === "PUT") {
+        await store.writeReviewSchedule(await readJsonBody(request));
+        sendJson(response, 200, { ok: true });
+        return;
+      }
+
       sendJson(response, 404, { error: "not found" });
     } catch (error) {
       sendJson(response, 400, {
@@ -73,6 +95,36 @@ export function createLocalApiServer(store: LocalDatabaseStore) {
       });
     }
   });
+}
+
+async function readDatabaseSummary(store: LocalDatabaseStore) {
+  const status = await store.ensureReady();
+
+  if (!status.ok) {
+    return {
+      ...status,
+      activeSession: null,
+      totalAttempts: 0,
+      questionProgressCount: 0,
+      reviewScheduleCount: 0
+    };
+  }
+
+  const [activeSession, totalAttempts, progressRecords, reviewSchedules] =
+    await Promise.all([
+      store.readActiveSession(),
+      store.countAttempts(),
+      store.readQuestionProgressList(),
+      store.readReviewSchedules()
+    ]);
+
+  return {
+    ...status,
+    activeSession,
+    totalAttempts,
+    questionProgressCount: progressRecords.length,
+    reviewScheduleCount: reviewSchedules.length
+  };
 }
 
 function sendJson(response: ServerResponse, statusCode: number, body: unknown) {

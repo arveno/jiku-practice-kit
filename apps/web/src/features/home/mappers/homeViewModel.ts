@@ -14,12 +14,12 @@ export function mapHomeViewModel(input: HomeViewModelInput): HomeViewModel {
   return {
     productName: "极库刷题",
     eyebrow: "Contract-first free practice kit",
-    description: "用免费公开题库、浏览器本地练习记录和可审计合同推进刷题闭环。",
+    description: "用免费公开题库、固定本地数据库和可审计合同推进刷题闭环。",
     navItems: [
       { id: "questions", label: "题库", to: "/questions" },
       { id: "practice", label: "练习", to: "/practice" },
       { id: "review", label: "复盘", to: "/review" },
-      { id: "import-export", label: "导入导出", to: "/import-export" }
+      { id: "data", label: "数据", to: "/data" }
     ],
     stats: [
       {

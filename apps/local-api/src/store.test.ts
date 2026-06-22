@@ -2,7 +2,12 @@ import { mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
-import type { QuestionProgress, StudyAttempt, StudySession } from "@jiku/contracts";
+import type {
+  QuestionProgress,
+  ReviewSchedule,
+  StudyAttempt,
+  StudySession
+} from "@jiku/contracts";
 import { createLocalDatabaseStore } from "./store";
 
 const timestamp = "2026-01-01T00:00:00.000Z";
@@ -55,6 +60,18 @@ function createProgress(overrides: Partial<QuestionProgress> = {}): QuestionProg
   };
 }
 
+function createSchedule(overrides: Partial<ReviewSchedule> = {}): ReviewSchedule {
+  return {
+    schemaVersion: 1,
+    questionId,
+    reason: "low-score",
+    priority: 80,
+    nextReviewAt: timestamp,
+    updatedAt: timestamp,
+    ...overrides
+  };
+}
+
 describe("createLocalDatabaseStore", () => {
   test("creates the fixed local data directory structure and manifest", async () => {
     const root = await createRoot();
@@ -76,6 +93,9 @@ describe("createLocalDatabaseStore", () => {
     await expect(readdir(join(root, "database", "question-progress"))).resolves.toEqual(
       []
     );
+    await expect(readdir(join(root, "database", "review-schedules"))).resolves.toEqual(
+      []
+    );
     await expect(readdir(join(root, "derived"))).resolves.toEqual([]);
     await expect(readdir(join(root, "backups"))).resolves.toEqual([]);
     await expect(readdir(join(root, "corrupted"))).resolves.toEqual([]);
@@ -89,11 +109,17 @@ describe("createLocalDatabaseStore", () => {
     await store.appendAttempt(createAttempt({ id: "attempt-1" }));
     await store.appendAttempt(createAttempt({ id: "attempt-2", score: 10 }));
     await store.writeQuestionProgress(createProgress({ bestScore: 10 }));
+    await store.writeReviewSchedule(createSchedule());
 
     expect(await store.readSession(sessionId)).toEqual(createSession());
     expect(await store.readQuestionProgress(questionId)).toEqual(
       createProgress({ bestScore: 10 })
     );
+    await expect(store.readQuestionProgressList()).resolves.toEqual([
+      createProgress({ bestScore: 10 })
+    ]);
+    await expect(store.readReviewSchedules()).resolves.toEqual([createSchedule()]);
+    await expect(store.countAttempts()).resolves.toBe(2);
 
     const attempts = await readFile(
       join(root, "database", "attempts", `${sessionId}.jsonl`),
