@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@10.8.1",
   "scripts": {
-    "dev": "pnpm --filter @jiku/web dev",
+    "dev": "pnpm --parallel --filter @jiku/web --filter @jiku/local-api dev",
     "build": "pnpm -r build",
     "preview": "pnpm --filter @jiku/web preview",
     "typecheck": "pnpm -r typecheck && tsc -p tsconfig.scripts.json --noEmit",
