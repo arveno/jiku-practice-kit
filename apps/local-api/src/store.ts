@@ -129,6 +129,21 @@ export function createLocalDatabaseStore(options: StoreOptions = {}) {
     );
   }
 
+  async function readActiveSession() {
+    await ensureReadyOrThrow();
+    const sessions = await Promise.all(
+      (await readdir(databaseFile("sessions")))
+        .filter((file) => file.endsWith(".json"))
+        .map((file) => readJson(databaseFile("sessions", file), studySessionSchema))
+    );
+
+    return (
+      sessions
+        .filter((session): session is StudySession => session?.status === "active")
+        .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0] ?? null
+    );
+  }
+
   async function appendAttempt(attempt: StudyAttempt) {
     const parsed = studyAttemptSchema.parse(attempt);
     await ensureReadyOrThrow();
@@ -212,6 +227,7 @@ export function createLocalDatabaseStore(options: StoreOptions = {}) {
     ensureReady,
     writeSession,
     readSession,
+    readActiveSession,
     appendAttempt,
     writeQuestionProgress,
     readQuestionProgress

@@ -1,3 +1,5 @@
+import { studySessionSchema, type StudySession } from "@jiku/contracts";
+
 export type LocalApiStatus =
   | {
       state: "connected";
@@ -74,5 +76,38 @@ export async function readLocalApiStatus(
       state: "unavailable",
       message: "本地服务未连接"
     };
+  }
+}
+
+export async function readActiveStudySession(
+  fetcher: LocalApiFetch = fetch
+): Promise<StudySession | null> {
+  const response = await fetcher("/api/sessions/active", {
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  return studySessionSchema.parse(await response.json());
+}
+
+export async function writeStudySession(
+  session: StudySession,
+  fetcher: LocalApiFetch = fetch
+) {
+  const parsedSession = studySessionSchema.parse(session);
+  const response = await fetcher(
+    `/api/sessions/${encodeURIComponent(parsedSession.id)}`,
+    {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(parsedSession)
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("failed to write study session");
   }
 }

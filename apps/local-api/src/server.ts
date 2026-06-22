@@ -16,6 +16,16 @@ export function createLocalApiServer(store: LocalDatabaseStore) {
         return;
       }
 
+      if (request.method === "GET" && url.pathname === "/sessions/active") {
+        const session = await store.readActiveSession();
+        sendJson(
+          response,
+          session === null ? 404 : 200,
+          session ?? { error: "not found" }
+        );
+        return;
+      }
+
       const sessionMatch = url.pathname.match(/^\/sessions\/([^/]+)$/);
       if (sessionMatch?.[1] && request.method === "GET") {
         const session = await store.readSession(decodeURIComponent(sessionMatch[1]));

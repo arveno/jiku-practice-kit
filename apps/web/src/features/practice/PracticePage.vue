@@ -9,6 +9,8 @@ import {
 } from "@jiku/domain";
 import { useScorecardStore } from "../scorecard/store";
 import { useLocalApiStore } from "../local-api/store";
+import { readActiveStudySession, writeStudySession } from "../local-api/client";
+import type { StudySession } from "@jiku/contracts";
 import {
   JkCard,
   JkEmpty,
@@ -22,6 +24,7 @@ import {
   selectPracticeQuestions,
   type PracticeScope
 } from "./mappers/practiceSelection";
+import { advanceStudySession, createStudySession } from "./mappers/practiceSession";
 
 type ScopeOption = {
   value: PracticeScope;
@@ -55,7 +58,6 @@ const route = useRoute();
 const scorecardStore = useScorecardStore();
 const localApiStore = useLocalApiStore();
 scorecardStore.load();
-void localApiStore.refresh();
 
 const scope = ref<PracticeScope>("random");
 const scopeValue = ref("");
@@ -66,6 +68,8 @@ const answerVisible = ref(false);
 const sessionStarted = ref(false);
 const sessionDone = ref(false);
 const feedbackMessage = ref("");
+const currentSession = ref<StudySession | null>(null);
+const savingAssessment = ref(false);
 const routeQuestionIds = computed(() => {
   const rawValue = route.query.questionIds;
   const value = Array.isArray(rawValue) ? rawValue[0] : rawValue;
@@ -146,44 +150,108 @@ function updateQuestionCount(value: string) {
   questionCount.value = Number.isFinite(nextCount) ? Math.max(1, nextCount) : 1;
 }
 
-function startPractice() {
-  sessionQuestions.value = selectPracticeQuestions(
-    allQuestions,
-    scorecardStore.scorecard,
-    {
-      scope: scope.value,
-      value: scopeValue.value,
-      count: questionCount.value
-    }
+async function startPractice() {
+  const questions = selectPracticeQuestions(allQuestions, scorecardStore.scorecard, {
+    scope: scope.value,
+    value: scopeValue.value,
+    count: questionCount.value
+  });
+  await startPracticeWithQuestionIds(
+    questions.map((question) => question.id),
+    "当前范围没有可练习题目。"
   );
-  currentIndex.value = 0;
-  answerVisible.value = false;
-  sessionStarted.value = true;
-  sessionDone.value = sessionQuestions.value.length === 0;
-  feedbackMessage.value =
-    sessionQuestions.value.length === 0 ? "当前范围没有可练习题目。" : "";
 }
 
-function startPracticeFromQuestionIds(questionIds: string[]) {
+function showSession(session: StudySession, emptyMessage: string) {
   sessionQuestions.value = selectPracticeQuestions(
     allQuestions,
     scorecardStore.scorecard,
     {
       scope: "question-ids",
-      questionIds,
-      count: questionIds.length
+      questionIds: session.questionIds,
+      count: session.questionIds.length
     }
   );
+  currentSession.value = session;
+  currentIndex.value = Math.min(session.currentIndex, sessionQuestions.value.length);
+  answerVisible.value = false;
+  sessionStarted.value = true;
+  sessionDone.value =
+    session.status === "completed" ||
+    sessionQuestions.value.length === 0 ||
+    currentIndex.value >= sessionQuestions.value.length;
+  feedbackMessage.value = sessionQuestions.value.length === 0 ? emptyMessage : "";
+}
+
+function showEmptySession(emptyMessage: string) {
+  sessionQuestions.value = [];
+  currentSession.value = null;
   currentIndex.value = 0;
   answerVisible.value = false;
   sessionStarted.value = true;
-  sessionDone.value = sessionQuestions.value.length === 0;
-  feedbackMessage.value =
-    sessionQuestions.value.length === 0 ? "当前筛选结果没有可练习题目。" : "";
+  sessionDone.value = true;
+  feedbackMessage.value = emptyMessage;
 }
 
-function saveAssessment(assessment: SelfAssessment) {
+async function startPracticeWithQuestionIds(
+  questionIds: string[],
+  emptyMessage: string
+) {
+  if (!localApiStore.connected) {
+    feedbackMessage.value = "本地服务未连接，不能开始可恢复练习。";
+    return;
+  }
+
+  const uniqueQuestionIds = Array.from(new Set(questionIds));
+  if (uniqueQuestionIds.length === 0) {
+    showEmptySession(emptyMessage);
+    return;
+  }
+
+  const session = createStudySession(uniqueQuestionIds);
+
+  try {
+    await writeStudySession(session);
+  } catch {
+    feedbackMessage.value = "本地保存失败，请确认本地服务仍在运行。";
+    return;
+  }
+
+  showSession(session, emptyMessage);
+}
+
+async function restoreOrStartPractice() {
+  const status = await localApiStore.refresh();
+
+  if (routeQuestionIds.value.length > 0) {
+    if (status.state !== "connected") {
+      feedbackMessage.value = "本地服务未连接，不能开始可恢复练习。";
+      return;
+    }
+
+    await startPracticeWithQuestionIds(
+      routeQuestionIds.value,
+      "当前筛选结果没有可练习题目。"
+    );
+    return;
+  }
+
+  if (status.state !== "connected") {
+    return;
+  }
+
+  const activeSession = await readActiveStudySession();
+  if (activeSession) {
+    showSession(activeSession, "当前轮次没有可练习题目。");
+  }
+}
+
+async function saveAssessment(assessment: SelfAssessment) {
   if (!currentQuestion.value) {
+    return;
+  }
+
+  if (savingAssessment.value) {
     return;
   }
 
@@ -192,27 +260,44 @@ function saveAssessment(assessment: SelfAssessment) {
     return;
   }
 
-  scorecardStore.save(
-    applySelfAssessment(scorecardStore.scorecard, {
-      questionId: currentQuestion.value.id,
-      assessment
-    })
-  );
+  savingAssessment.value = true;
+  const nextIndex = currentIndex.value + 1;
+  const nextSession = currentSession.value
+    ? advanceStudySession(currentSession.value, nextIndex)
+    : null;
+
+  try {
+    if (nextSession) {
+      await writeStudySession(nextSession);
+      currentSession.value = nextSession;
+    }
+
+    scorecardStore.save(
+      applySelfAssessment(scorecardStore.scorecard, {
+        questionId: currentQuestion.value.id,
+        assessment
+      })
+    );
+  } catch {
+    feedbackMessage.value = "本地保存失败，请确认本地服务仍在运行。";
+    savingAssessment.value = false;
+    return;
+  }
 
   if (currentIndex.value >= sessionQuestions.value.length - 1) {
     sessionDone.value = true;
     feedbackMessage.value = "本轮练习已保存。";
+    savingAssessment.value = false;
     return;
   }
 
   currentIndex.value += 1;
   answerVisible.value = false;
   feedbackMessage.value = "已保存，进入下一题。";
+  savingAssessment.value = false;
 }
 
-if (routeQuestionIds.value.length > 0) {
-  startPracticeFromQuestionIds(routeQuestionIds.value);
-}
+void restoreOrStartPractice();
 </script>
 
 <template>
@@ -262,7 +347,12 @@ if (routeQuestionIds.value.length > 0) {
             />
           </label>
 
-          <button type="button" class="start-button" @click="startPractice">
+          <button
+            type="button"
+            class="start-button"
+            :disabled="!localApiStore.connected"
+            @click="void startPractice()"
+          >
             开始练习
           </button>
         </div>
@@ -315,8 +405,8 @@ if (routeQuestionIds.value.length > 0) {
             v-for="assessment in assessments"
             :key="assessment.value"
             type="button"
-            :disabled="!localApiStore.connected"
-            @click="saveAssessment(assessment.value)"
+            :disabled="!localApiStore.connected || savingAssessment"
+            @click="void saveAssessment(assessment.value)"
           >
             <span>{{ assessment.label }}</span>
             <strong>{{ assessment.scoreLabel }}</strong>
@@ -480,6 +570,11 @@ h3 {
 }
 
 .assessment-grid button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.start-button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
