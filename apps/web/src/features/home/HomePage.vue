@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { RouterLink } from "vue-router";
 import { allQuestions } from "@jiku/content";
 import { getQuestionStats } from "@jiku/domain";
 import { useScorecardStore } from "../scorecard/store";

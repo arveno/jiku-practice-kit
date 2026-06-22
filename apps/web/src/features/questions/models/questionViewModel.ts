@@ -3,6 +3,7 @@ export type QuestionStatusTagType = "default" | "success" | "warning";
 
 export type QuestionViewModel = {
   id: string;
+  to: string;
   title: string;
   prompt: string;
   category: string;
