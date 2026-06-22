@@ -1,5 +1,4 @@
-import type { Question, ScoreRecord, Scorecard } from "@jiku/contracts";
-import { getScorecardStats } from "@jiku/domain";
+import type { Question, QuestionProgress, ReviewSchedule } from "@jiku/contracts";
 
 type ReviewStatViewModel = {
   id: string;
@@ -15,10 +14,10 @@ type ReviewQuestionItemViewModel = {
   meta: string;
 };
 
-type ReviewAverageViewModel = {
-  id: string;
-  label: string;
-  value: string;
+type ReviewQueueItemViewModel = ReviewQuestionItemViewModel & {
+  reasonLabel: string;
+  nextReviewAtLabel: string;
+  priorityLabel: string;
 };
 
 type ReviewRecordViewModel = ReviewQuestionItemViewModel & {
@@ -27,99 +26,118 @@ type ReviewRecordViewModel = ReviewQuestionItemViewModel & {
 
 type ReviewViewModel = {
   stats: ReviewStatViewModel[];
+  reviewQueue: ReviewQueueItemViewModel[];
   weakQuestions: ReviewQuestionItemViewModel[];
   lowScoreQuestions: ReviewQuestionItemViewModel[];
-  categoryAverages: ReviewAverageViewModel[];
-  topicAverages: ReviewAverageViewModel[];
   recentRecords: ReviewRecordViewModel[];
 };
 
 type PracticedQuestion = {
   question: Question;
-  record: ScoreRecord;
+  progress: QuestionProgress;
+};
+
+const reasonLabels: Record<ReviewSchedule["reason"], string> = {
+  wrong: "错题",
+  "low-score": "低分",
+  stale: "久未练习"
 };
 
 function formatScore(score: number) {
   return `${score.toFixed(1)}/10`;
 }
 
-function formatAverage(score: number) {
-  return score.toFixed(1);
-}
-
-function formatPracticedAt(timestamp: string) {
+function formatTimestamp(timestamp: string) {
   return timestamp.slice(0, 16).replace("T", " ");
-}
-
-function average(values: number[]) {
-  return values.reduce((total, value) => total + value, 0) / values.length;
 }
 
 function toQuestionItem({
   question,
-  record
+  progress
 }: PracticedQuestion): ReviewQuestionItemViewModel {
   return {
     id: question.id,
     title: question.title,
     to: `/questions/${question.id}`,
-    latestScoreLabel: formatScore(record.latestScore),
+    latestScoreLabel: formatScore(progress.latestScore),
     meta: `${question.category} / ${question.topic}`
   };
 }
 
-function averageBy(
-  practicedQuestions: PracticedQuestion[],
-  key: (question: Question) => string
-) {
-  const grouped = new Map<string, number[]>();
-
-  for (const { question, record } of practicedQuestions) {
-    const id = key(question);
-    grouped.set(id, [...(grouped.get(id) ?? []), record.latestScore]);
-  }
-
-  return Array.from(grouped, ([id, scores]) => ({
-    id,
-    label: id,
-    value: formatAverage(average(scores))
-  })).sort((a, b) => a.label.localeCompare(b.label));
-}
-
 export function mapReviewViewModel(
   questions: Question[],
-  scorecard: Scorecard
+  progressRecords: QuestionProgress[],
+  reviewSchedules: ReviewSchedule[],
+  now = new Date()
 ): ReviewViewModel {
-  const stats = getScorecardStats(scorecard);
-  const practicedQuestions = questions
-    .map((question) => ({ question, record: scorecard.records[question.id] }))
-    .filter((item): item is PracticedQuestion => Boolean(item.record));
-  const lowScoreQuestions = practicedQuestions.filter(
-    ({ question, record }) => record.latestScore < question.scoring.passScore
+  const questionsById = new Map(questions.map((question) => [question.id, question]));
+  const progressByQuestionId = new Map(
+    progressRecords.map((progress) => [progress.questionId, progress])
   );
+  const practicedQuestions = progressRecords
+    .map((progress) => ({
+      question: questionsById.get(progress.questionId),
+      progress
+    }))
+    .filter((item): item is PracticedQuestion => Boolean(item.question));
+  const lowScoreQuestions = practicedQuestions.filter(
+    ({ question, progress }) => progress.latestScore < question.scoring.passScore
+  );
+  const dueReviewSchedules = reviewSchedules
+    .filter((schedule) => schedule.nextReviewAt <= now.toISOString())
+    .sort(
+      (left, right) =>
+        right.priority - left.priority ||
+        left.nextReviewAt.localeCompare(right.nextReviewAt)
+    );
 
   return {
     stats: [
-      { id: "practiced", label: "已练题数", value: String(stats.practicedCount) },
+      { id: "practiced", label: "已练题数", value: String(progressRecords.length) },
       {
-        id: "average",
-        label: "平均分",
-        value: formatAverage(stats.averageLatestScore)
+        id: "attempts",
+        label: "总作答",
+        value: String(
+          progressRecords.reduce((total, progress) => total + progress.attempts, 0)
+        )
       },
-      { id: "weak", label: "弱项题", value: String(stats.weakCount) },
-      { id: "low-score", label: "低分题", value: String(lowScoreQuestions.length) }
+      { id: "due-review", label: "待复习", value: String(dueReviewSchedules.length) },
+      {
+        id: "weak",
+        label: "弱项题",
+        value: String(
+          progressRecords.filter((progress) => progress.status === "weak").length
+        )
+      }
     ],
+    reviewQueue: dueReviewSchedules
+      .map((schedule) => {
+        const question = questionsById.get(schedule.questionId);
+        const progress = progressByQuestionId.get(schedule.questionId);
+
+        if (!question || !progress) {
+          return null;
+        }
+
+        return {
+          ...toQuestionItem({ question, progress }),
+          reasonLabel: reasonLabels[schedule.reason],
+          nextReviewAtLabel: formatTimestamp(schedule.nextReviewAt),
+          priorityLabel: String(schedule.priority)
+        };
+      })
+      .filter((item): item is ReviewQueueItemViewModel => item !== null),
     weakQuestions: practicedQuestions
-      .filter(({ record }) => record.status === "weak")
+      .filter(({ progress }) => progress.status === "weak")
       .map(toQuestionItem),
     lowScoreQuestions: lowScoreQuestions.map(toQuestionItem),
-    categoryAverages: averageBy(practicedQuestions, (question) => question.category),
-    topicAverages: averageBy(practicedQuestions, (question) => question.topic),
     recentRecords: [...practicedQuestions]
-      .sort((a, b) => b.record.lastPracticedAt.localeCompare(a.record.lastPracticedAt))
+      .sort((a, b) =>
+        b.progress.lastPracticedAt.localeCompare(a.progress.lastPracticedAt)
+      )
       .map((item) => ({
         ...toQuestionItem(item),
-        practicedAtLabel: formatPracticedAt(item.record.lastPracticedAt)
+        practicedAtLabel: formatTimestamp(item.progress.lastPracticedAt)
       }))
   };
 }

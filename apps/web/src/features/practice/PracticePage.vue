@@ -4,12 +4,22 @@ import { useRoute } from "vue-router";
 import { allQuestions } from "@jiku/content";
 import {
   applySelfAssessment,
+  createReviewSchedule,
+  createStudyAttempt,
   deriveQuestionFilterOptions,
+  updateQuestionProgress,
   type SelfAssessment
 } from "@jiku/domain";
 import { useScorecardStore } from "../scorecard/store";
 import { useLocalApiStore } from "../local-api/store";
-import { readActiveStudySession, writeStudySession } from "../local-api/client";
+import {
+  readActiveStudySession,
+  readQuestionProgress,
+  writeQuestionProgress,
+  writeReviewSchedule,
+  writeStudyAttempt,
+  writeStudySession
+} from "../local-api/client";
 import type { StudySession } from "@jiku/contracts";
 import {
   JkCard,
@@ -260,23 +270,46 @@ async function saveAssessment(assessment: SelfAssessment) {
     return;
   }
 
+  if (!currentSession.value) {
+    feedbackMessage.value = "当前轮次不存在，不能保存练习进度。";
+    return;
+  }
+
   savingAssessment.value = true;
+  const question = currentQuestion.value;
+  const session = currentSession.value;
+  const answeredAt = new Date();
   const nextIndex = currentIndex.value + 1;
-  const nextSession = currentSession.value
-    ? advanceStudySession(currentSession.value, nextIndex)
-    : null;
 
   try {
-    if (nextSession) {
-      await writeStudySession(nextSession);
-      currentSession.value = nextSession;
-    }
-
-    scorecardStore.save(
-      applySelfAssessment(scorecardStore.scorecard, {
-        questionId: currentQuestion.value.id,
+    const attempt = createStudyAttempt(
+      {
+        sessionId: session.id,
+        questionId: question.id,
         assessment
-      })
+      },
+      answeredAt
+    );
+    const previousProgress = await readQuestionProgress(question.id);
+    const nextProgress = updateQuestionProgress(question, attempt, previousProgress);
+    const nextSchedule = createReviewSchedule(question, nextProgress, answeredAt);
+    const nextSession = advanceStudySession(session, nextIndex, answeredAt);
+
+    await writeStudyAttempt(attempt);
+    await writeQuestionProgress(nextProgress);
+    await writeReviewSchedule(nextSchedule);
+    await writeStudySession(nextSession);
+    currentSession.value = nextSession;
+
+    scorecardStore.replace(
+      applySelfAssessment(
+        scorecardStore.scorecard,
+        {
+          questionId: question.id,
+          assessment
+        },
+        answeredAt
+      )
     );
   } catch {
     feedbackMessage.value = "本地保存失败，请确认本地服务仍在运行。";

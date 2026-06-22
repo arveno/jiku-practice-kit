@@ -9,3 +9,8 @@ export {
 export { isPassingScore } from "./questionScoring";
 export { getScorecardStats, type ScorecardStats } from "./scorecardStats";
 export { applySelfAssessment, type SelfAssessment } from "./selfAssessment";
+export {
+  createReviewSchedule,
+  createStudyAttempt,
+  updateQuestionProgress
+} from "./studyRecords";

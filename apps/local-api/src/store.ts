@@ -13,10 +13,12 @@ import { dirname, join, relative } from "node:path";
 import {
   localDatabaseManifestSchema,
   questionProgressSchema,
+  reviewScheduleSchema,
   studyAttemptSchema,
   studySessionSchema,
   type LocalDatabaseManifest,
   type QuestionProgress,
+  type ReviewSchedule,
   type StudyAttempt,
   type StudySession
 } from "@jiku/contracts";
@@ -68,6 +70,7 @@ export function createLocalDatabaseStore(options: StoreOptions = {}) {
       await mkdir(databaseFile("sessions"), { recursive: true });
       await mkdir(databaseFile("attempts"), { recursive: true });
       await mkdir(databaseFile("question-progress"), { recursive: true });
+      await mkdir(databaseFile("review-schedules"), { recursive: true });
       await mkdir(join(root, "derived"), { recursive: true });
       await mkdir(join(root, "backups"), { recursive: true });
       await mkdir(corruptedPath, { recursive: true });
@@ -154,6 +157,23 @@ export function createLocalDatabaseStore(options: StoreOptions = {}) {
     );
   }
 
+  async function countAttempts() {
+    await ensureReadyOrThrow();
+    const files = (await readdir(databaseFile("attempts"))).filter((file) =>
+      file.endsWith(".jsonl")
+    );
+    const lineCounts = await Promise.all(
+      files.map(
+        async (file) =>
+          (await readFile(databaseFile("attempts", file), "utf8"))
+            .split("\n")
+            .filter(Boolean).length
+      )
+    );
+
+    return lineCounts.reduce((total, count) => total + count, 0);
+  }
+
   async function writeQuestionProgress(progress: QuestionProgress) {
     const parsed = questionProgressSchema.parse(progress);
     await ensureReadyOrThrow();
@@ -169,6 +189,25 @@ export function createLocalDatabaseStore(options: StoreOptions = {}) {
       databaseFile("question-progress", `${safeName(questionId)}.json`),
       questionProgressSchema
     );
+  }
+
+  async function readQuestionProgressList() {
+    await ensureReadyOrThrow();
+    return readJsonList("question-progress", questionProgressSchema);
+  }
+
+  async function writeReviewSchedule(schedule: ReviewSchedule) {
+    const parsed = reviewScheduleSchema.parse(schedule);
+    await ensureReadyOrThrow();
+    await writeJson(
+      databaseFile("review-schedules", `${safeName(parsed.questionId)}.json`),
+      parsed
+    );
+  }
+
+  async function readReviewSchedules() {
+    await ensureReadyOrThrow();
+    return readJsonList("review-schedules", reviewScheduleSchema);
   }
 
   async function ensureReadyOrThrow() {
@@ -203,6 +242,19 @@ export function createLocalDatabaseStore(options: StoreOptions = {}) {
     }
   }
 
+  async function readJsonList<T>(
+    directory: string,
+    schema: { parse(input: unknown): T }
+  ) {
+    const records: Array<T | null> = await Promise.all(
+      (await readdir(databaseFile(directory)))
+        .filter((file) => file.endsWith(".json"))
+        .map((file) => readJson(databaseFile(directory, file), schema))
+    );
+
+    return records.filter((record): record is T => record !== null);
+  }
+
   async function backupFile(path: string) {
     const backupName = `${relative(root, path).replace(/[\\/]/g, "__")}.${Date.now()}`;
     await copyFile(path, join(root, "backups", backupName));
@@ -229,8 +281,12 @@ export function createLocalDatabaseStore(options: StoreOptions = {}) {
     readSession,
     readActiveSession,
     appendAttempt,
+    countAttempts,
     writeQuestionProgress,
-    readQuestionProgress
+    readQuestionProgress,
+    readQuestionProgressList,
+    writeReviewSchedule,
+    readReviewSchedules
   };
 }
 

@@ -1,17 +1,50 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { RouterLink } from "vue-router";
 import { allQuestions } from "@jiku/content";
-import { useScorecardStore } from "../scorecard/store";
+import { useLocalApiStore } from "../local-api/store";
+import { readQuestionProgressList, readReviewSchedules } from "../local-api/client";
+import type { QuestionProgress, ReviewSchedule } from "@jiku/contracts";
 import { JkCard, JkPage, JkPageHeader, JkStatCard } from "../../shared/ui";
 import { mapReviewViewModel } from "./mappers/reviewViewModel";
 
-const scorecardStore = useScorecardStore();
-scorecardStore.load();
+const localApiStore = useLocalApiStore();
+const progressRecords = ref<QuestionProgress[]>([]);
+const reviewSchedules = ref<ReviewSchedule[]>([]);
 
 const viewModel = computed(() =>
-  mapReviewViewModel(allQuestions, scorecardStore.scorecard)
+  mapReviewViewModel(allQuestions, progressRecords.value, reviewSchedules.value)
 );
+const localApiNotice = computed(() => {
+  if (localApiStore.status.state === "connected") {
+    return `本地服务已连接：${localApiStore.status.databasePath}`;
+  }
+
+  if (localApiStore.status.state === "unwritable") {
+    return `本地数据库不可写：${localApiStore.status.message}`;
+  }
+
+  return localApiStore.status.message;
+});
+
+async function refreshReview() {
+  const status = await localApiStore.refresh();
+
+  if (status.state !== "connected") {
+    progressRecords.value = [];
+    reviewSchedules.value = [];
+    return;
+  }
+
+  const [nextProgressRecords, nextReviewSchedules] = await Promise.all([
+    readQuestionProgressList(),
+    readReviewSchedules()
+  ]);
+  progressRecords.value = nextProgressRecords;
+  reviewSchedules.value = nextReviewSchedules;
+}
+
+void refreshReview();
 </script>
 
 <template>
@@ -19,8 +52,12 @@ const viewModel = computed(() =>
     <JkPageHeader
       eyebrow="Review"
       title="复盘"
-      description="基于本地 scorecard 查看弱项和练习反馈。"
+      description="基于本地数据库查看弱项、低分和到期复习题。"
     />
+
+    <p class="local-api-status" :data-state="localApiStore.status.state">
+      {{ localApiNotice }}
+    </p>
 
     <section class="review-stats" aria-label="复盘统计">
       <JkStatCard
@@ -32,6 +69,21 @@ const viewModel = computed(() =>
     </section>
 
     <section class="review-grid" aria-label="复盘明细">
+      <JkCard class="queue-card">
+        <h2>复习队列</h2>
+        <p v-if="viewModel.reviewQueue.length === 0" class="muted">暂无到期复习题。</p>
+        <ul v-else class="item-list">
+          <li v-for="question in viewModel.reviewQueue" :key="question.id">
+            <RouterLink :to="question.to">{{ question.title }}</RouterLink>
+            <span>
+              {{ question.reasonLabel }} · {{ question.nextReviewAtLabel }} · 优先级
+              {{ question.priorityLabel }}
+            </span>
+            <strong>{{ question.latestScoreLabel }}</strong>
+          </li>
+        </ul>
+      </JkCard>
+
       <JkCard>
         <h2>弱项题</h2>
         <p v-if="viewModel.weakQuestions.length === 0" class="muted">暂无弱项题。</p>
@@ -54,30 +106,6 @@ const viewModel = computed(() =>
             <RouterLink :to="question.to">{{ question.title }}</RouterLink>
             <span>{{ question.meta }}</span>
             <strong>{{ question.latestScoreLabel }}</strong>
-          </li>
-        </ul>
-      </JkCard>
-
-      <JkCard>
-        <h2>分类平均分</h2>
-        <p v-if="viewModel.categoryAverages.length === 0" class="muted">
-          暂无分类数据。
-        </p>
-        <ul v-else class="average-list">
-          <li v-for="item in viewModel.categoryAverages" :key="item.id">
-            <span>{{ item.label }}</span>
-            <strong>{{ item.value }}</strong>
-          </li>
-        </ul>
-      </JkCard>
-
-      <JkCard>
-        <h2>专题平均分</h2>
-        <p v-if="viewModel.topicAverages.length === 0" class="muted">暂无专题数据。</p>
-        <ul v-else class="average-list">
-          <li v-for="item in viewModel.topicAverages" :key="item.id">
-            <span>{{ item.label }}</span>
-            <strong>{{ item.value }}</strong>
           </li>
         </ul>
       </JkCard>
@@ -118,6 +146,7 @@ const viewModel = computed(() =>
   min-width: 0;
 }
 
+.queue-card,
 .recent-card {
   grid-column: 1 / -1;
 }
@@ -141,8 +170,31 @@ h2 {
   line-height: 24px;
 }
 
-.item-list,
-.average-list {
+.local-api-status {
+  margin: 0 0 16px;
+  border: 1px solid #ebebeb;
+  border-radius: 6px;
+  background: #fafafa;
+  color: #666666;
+  font-size: 14px;
+  line-height: 20px;
+  padding: 10px 12px;
+}
+
+.local-api-status[data-state="connected"] {
+  border-color: #d3e5ff;
+  background: #f5f9ff;
+  color: #0761d1;
+}
+
+.local-api-status[data-state="unwritable"],
+.local-api-status[data-state="unavailable"] {
+  border-color: #f7d4d6;
+  background: #fff7f8;
+  color: #c50000;
+}
+
+.item-list {
   display: grid;
   gap: 12px;
   margin-top: 16px;
@@ -150,8 +202,7 @@ h2 {
   list-style: none;
 }
 
-.item-list li,
-.average-list li {
+.item-list li {
   display: grid;
   gap: 4px;
   border-top: 1px solid #ebebeb;
@@ -169,24 +220,17 @@ h2 {
   color: #0070f3;
 }
 
-.item-list span,
-.average-list span {
+.item-list span {
   color: #666666;
   font-size: 14px;
   line-height: 20px;
 }
 
-.item-list strong,
-.average-list strong {
+.item-list strong {
   color: #171717;
   font-size: 18px;
   font-weight: 600;
   line-height: 24px;
-}
-
-.average-list li {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
 }
 
 @media (max-width: 880px) {

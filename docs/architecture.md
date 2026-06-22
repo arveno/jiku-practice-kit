@@ -70,7 +70,7 @@ apps/web/src/
     practice/
     scorecard/
     review/
-    import-export/
+    database/
 ```
 
 每个 feature 默认结构：
