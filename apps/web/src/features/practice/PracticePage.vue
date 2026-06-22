@@ -7,6 +7,7 @@ import {
   type SelfAssessment
 } from "@jiku/domain";
 import { useScorecardStore } from "../scorecard/store";
+import { useLocalApiStore } from "../local-api/store";
 import {
   JkCard,
   JkEmpty,
@@ -50,7 +51,9 @@ const assessments: {
 
 const filterOptions = deriveQuestionFilterOptions(allQuestions);
 const scorecardStore = useScorecardStore();
+const localApiStore = useLocalApiStore();
 scorecardStore.load();
+void localApiStore.refresh();
 
 const scope = ref<PracticeScope>("random");
 const scopeValue = ref("");
@@ -93,6 +96,17 @@ const currentQuestion = computed(() => sessionQuestions.value[currentIndex.value
 const sessionDoneTitle = computed(() =>
   sessionQuestions.value.length === 0 ? "没有可练习题目" : "练习完成"
 );
+const localApiNotice = computed(() => {
+  if (localApiStore.status.state === "connected") {
+    return `本地服务已连接：${localApiStore.status.databasePath}`;
+  }
+
+  if (localApiStore.status.state === "unwritable") {
+    return `本地数据库不可写：${localApiStore.status.message}`;
+  }
+
+  return localApiStore.status.message;
+});
 
 const currentViewModel = computed(() => {
   if (!currentQuestion.value) {
@@ -142,6 +156,11 @@ function saveAssessment(assessment: SelfAssessment) {
     return;
   }
 
+  if (!localApiStore.connected) {
+    feedbackMessage.value = "本地服务未连接，不能保存练习进度。";
+    return;
+  }
+
   scorecardStore.save(
     applySelfAssessment(scorecardStore.scorecard, {
       questionId: currentQuestion.value.id,
@@ -171,6 +190,9 @@ function saveAssessment(assessment: SelfAssessment) {
 
     <section class="practice-layout" aria-label="练习模式">
       <JkCard>
+        <p class="local-api-status" :data-state="localApiStore.status.state">
+          {{ localApiNotice }}
+        </p>
         <div class="setup-grid">
           <label class="field">
             <span>练习范围</span>
@@ -258,6 +280,7 @@ function saveAssessment(assessment: SelfAssessment) {
             v-for="assessment in assessments"
             :key="assessment.value"
             type="button"
+            :disabled="!localApiStore.connected"
             @click="saveAssessment(assessment.value)"
           >
             <span>{{ assessment.label }}</span>
@@ -325,6 +348,30 @@ button {
   margin: 12px 0 0;
   color: #666666;
   font-size: 14px;
+}
+
+.local-api-status {
+  margin: 0 0 12px;
+  border: 1px solid #ebebeb;
+  border-radius: 6px;
+  background: #fafafa;
+  color: #666666;
+  font-size: 14px;
+  line-height: 20px;
+  padding: 10px 12px;
+}
+
+.local-api-status[data-state="connected"] {
+  border-color: #d3e5ff;
+  background: #f5f9ff;
+  color: #0761d1;
+}
+
+.local-api-status[data-state="unwritable"],
+.local-api-status[data-state="unavailable"] {
+  border-color: #f7d4d6;
+  background: #fff7f8;
+  color: #c50000;
 }
 
 .section-heading {
@@ -395,6 +442,11 @@ h3 {
   color: #171717;
   padding: 12px;
   text-align: left;
+}
+
+.assessment-grid button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .assessment-grid strong {
