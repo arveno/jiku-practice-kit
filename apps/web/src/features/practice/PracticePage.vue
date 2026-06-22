@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { useRoute } from "vue-router";
 import { allQuestions } from "@jiku/content";
 import {
   applySelfAssessment,
@@ -50,6 +51,7 @@ const assessments: {
 ];
 
 const filterOptions = deriveQuestionFilterOptions(allQuestions);
+const route = useRoute();
 const scorecardStore = useScorecardStore();
 const localApiStore = useLocalApiStore();
 scorecardStore.load();
@@ -64,6 +66,17 @@ const answerVisible = ref(false);
 const sessionStarted = ref(false);
 const sessionDone = ref(false);
 const feedbackMessage = ref("");
+const routeQuestionIds = computed(() => {
+  const rawValue = route.query.questionIds;
+  const value = Array.isArray(rawValue) ? rawValue[0] : rawValue;
+
+  return typeof value === "string"
+    ? value
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean)
+    : [];
+});
 
 const scopeValueOptions = computed(() => {
   if (scope.value === "category") {
@@ -151,6 +164,24 @@ function startPractice() {
     sessionQuestions.value.length === 0 ? "当前范围没有可练习题目。" : "";
 }
 
+function startPracticeFromQuestionIds(questionIds: string[]) {
+  sessionQuestions.value = selectPracticeQuestions(
+    allQuestions,
+    scorecardStore.scorecard,
+    {
+      scope: "question-ids",
+      questionIds,
+      count: questionIds.length
+    }
+  );
+  currentIndex.value = 0;
+  answerVisible.value = false;
+  sessionStarted.value = true;
+  sessionDone.value = sessionQuestions.value.length === 0;
+  feedbackMessage.value =
+    sessionQuestions.value.length === 0 ? "当前筛选结果没有可练习题目。" : "";
+}
+
 function saveAssessment(assessment: SelfAssessment) {
   if (!currentQuestion.value) {
     return;
@@ -177,6 +208,10 @@ function saveAssessment(assessment: SelfAssessment) {
   currentIndex.value += 1;
   answerVisible.value = false;
   feedbackMessage.value = "已保存，进入下一题。";
+}
+
+if (routeQuestionIds.value.length > 0) {
+  startPracticeFromQuestionIds(routeQuestionIds.value);
 }
 </script>
 

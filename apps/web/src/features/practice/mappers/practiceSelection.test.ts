@@ -136,4 +136,14 @@ describe("selectPracticeQuestions", () => {
       })
     ).toHaveLength(2);
   });
+
+  test("selects questions by explicit question ids", () => {
+    expect(
+      selectPracticeQuestions(questions, scorecard, {
+        scope: "question-ids",
+        questionIds: ["vue-computed-vs-watch", "react-state-rerender"],
+        count: 5
+      }).map((question) => question.id)
+    ).toEqual(["react-state-rerender", "vue-computed-vs-watch"]);
+  });
 });

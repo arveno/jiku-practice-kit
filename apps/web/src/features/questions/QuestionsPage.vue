@@ -26,6 +26,7 @@ import {
   mapQuestionFiltersToQuery,
   mapQueryToQuestionFilters
 } from "./mappers/questionFilterQuery";
+import { mapQuestionIdsToPracticeRoute } from "./mappers/questionPracticeRoute";
 
 type SelectFilterKey = Exclude<keyof QuestionFilters, "keyword">;
 
@@ -102,6 +103,11 @@ const questionCards = computed(() =>
     mapQuestionToViewModel(question, scorecardStore.scorecard.records[question.id])
   )
 );
+const practiceRoute = computed(() => ({
+  ...mapQuestionIdsToPracticeRoute(
+    filteredQuestions.value.map((question) => question.id)
+  )
+}));
 
 function updateFilter(key: keyof QuestionFilters, value: string) {
   const nextFilters = {
@@ -159,9 +165,19 @@ function eventValue(event: unknown) {
       </label>
     </section>
 
-    <p class="result-summary">
-      显示 {{ questionCards.length }} / {{ allQuestions.length }} 道 free 题
-    </p>
+    <div class="result-bar">
+      <p class="result-summary">
+        显示 {{ questionCards.length }} / {{ allQuestions.length }} 道 free 题
+      </p>
+      <RouterLink
+        v-if="questionCards.length > 0"
+        class="practice-link"
+        :to="practiceRoute"
+      >
+        开始练习
+      </RouterLink>
+      <button v-else type="button" class="practice-link" disabled>开始练习</button>
+    </div>
 
     <section class="question-list" aria-label="题库列表">
       <JkEmpty
@@ -256,11 +272,39 @@ select:focus {
   outline: none;
 }
 
-.result-summary {
+.result-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
   margin: 0 0 16px;
+}
+
+.result-summary {
+  margin: 0;
   color: #666666;
   font-size: 14px;
   line-height: 20px;
+}
+
+.practice-link {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  border: 0;
+  border-radius: 6px;
+  background: #171717;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  padding: 0 12px;
+  text-decoration: none;
+}
+
+.practice-link:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .question-list {
@@ -349,6 +393,11 @@ dd {
 
   .question-card-header {
     display: grid;
+  }
+
+  .result-bar {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 </style>
