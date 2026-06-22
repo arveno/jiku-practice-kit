@@ -26,3 +26,25 @@ export {
   type ScoreRecord,
   type ScoreStatus
 } from "./scorecard";
+
+export {
+  localDatabaseManifestSchema,
+  localDatabaseSchemaVersion,
+  questionProgressSchema,
+  reviewReasonSchema,
+  reviewScheduleSchema,
+  studyAssessmentSchema,
+  studyAttemptSchema,
+  studySessionSchema,
+  studySessionSourceSchema,
+  studySessionStatusSchema,
+  type LocalDatabaseManifest,
+  type QuestionProgress,
+  type ReviewReason,
+  type ReviewSchedule,
+  type StudyAssessment,
+  type StudyAttempt,
+  type StudySession,
+  type StudySessionSource,
+  type StudySessionStatus
+} from "./localDatabase";

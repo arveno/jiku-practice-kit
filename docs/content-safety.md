@@ -1,6 +1,6 @@
 # 内容安全
 
-Phase 1 只做 free 内容。公开仓库可以包含：
+当前只做 free 内容。公开仓库可以包含：
 
 - 代码
 - schema
@@ -14,6 +14,7 @@ Phase 1 只做 free 内容。公开仓库可以包含：
 - 付费/VIP 答案
 - 本地 scorecard
 - `scorecard.json`、`*.scorecard.json`、`scorecards/` 下的本地练习记录
+- `~/.jiku-practice-kit/` 或 `jiku-study-data/` 下的本地学习数据库
 - `.local/` 文件
 - `packages/content/src/private/` 下的文件
 - 任何 `paidAnswer`、`vipAnswer`、`premiumAnswer` 或 `accessLevel: "paid"` 形态的内容字段
@@ -22,6 +23,8 @@ Phase 1 只做 free 内容。公开仓库可以包含：
 
 ```text
 .local/
+.jiku-practice-kit/
+jiku-study-data/
 private/
 packages/content/src/private/
 scorecard.json
@@ -37,6 +40,7 @@ scorecards/
 CI 门禁覆盖：
 
 - git 可见文件里的 private/local 路径和本地 scorecard 数据文件
-- Phase 1 非 free 题目
+- git 可见文件里的本地学习数据库目录和记录
+- 非 free 题目
 - 付费/VIP 答案字段
 - Web 构建产物里的 private/local 路径、scorecard 数据引用和付费答案字段

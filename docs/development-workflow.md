@@ -29,6 +29,7 @@
 
 - 是否复用 `@jiku/contracts`
 - 是否出现重复模型或多轨实现
-- 是否绕过 storage 边界
+- 是否绕过 Phase 1 遗留 scorecard storage 或 Phase 2 本地 API 边界
 - 是否引入不必要抽象
 - 是否违反 free-only 内容规则
+- 是否把本地学习数据库记录放进 git 可见文件

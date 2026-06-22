@@ -74,6 +74,8 @@ describe("findArchitectureFailures", () => {
       [
         { path: "scorecard.json", content: "{}" },
         { path: "scorecards/session.json", content: "{}" },
+        { path: "jiku-study-data/database/manifest.json", content: "{}" },
+        { path: ".jiku-practice-kit/database/sessions/session.json", content: "{}" },
         {
           path: "packages/content/src/public/paid-answer.ts",
           content: "export const paidAnswer = 'paid solution';"
@@ -89,6 +91,8 @@ describe("findArchitectureFailures", () => {
     expect(failures).toEqual([
       "scorecard data file must stay out of git-visible files: scorecard.json",
       "scorecard data file must stay out of git-visible files: scorecards/session.json",
+      "local database file must stay out of git-visible files: jiku-study-data/database/manifest.json",
+      "local database file must stay out of git-visible files: .jiku-practice-kit/database/sessions/session.json",
       "paid answer content must stay out of git-visible files: packages/content/src/public/paid-answer.ts",
       "paid answer content must stay out of git-visible files: packages/content/src/public/questions.ts"
     ]);
@@ -108,6 +112,10 @@ describe("findArchitectureFailures", () => {
           content: 'const file = "scorecard.json";'
         },
         {
+          path: "apps/web/dist/assets/local-database.js",
+          content: 'const dir = ".jiku-practice-kit/database/sessions/";'
+        },
+        {
           path: "apps/web/dist/assets/paid-answer.js",
           content: "const paidAnswer = 'paid solution';"
         }
@@ -117,6 +125,7 @@ describe("findArchitectureFailures", () => {
     expect(failures).toEqual([
       "build output references forbidden private/local path: apps/web/dist/assets/local.js",
       "build output references scorecard data: apps/web/dist/assets/scorecard.js",
+      "build output references local database data: apps/web/dist/assets/local-database.js",
       "build output references paid answer content: apps/web/dist/assets/paid-answer.js"
     ]);
   });

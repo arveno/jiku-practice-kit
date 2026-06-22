@@ -23,6 +23,20 @@ docs
 
 未来后端和小程序代码也应该导入同一个 `@jiku/contracts` 包，不能重新创建一套核心模型。
 
+Phase 2 新增本地学习数据库合同，仍由 `packages/contracts` 定义。固定本地目录为
+`~/.jiku-practice-kit/`：
+
+```text
+~/.jiku-practice-kit/
+  database/   # 未来可落库的核心学习数据
+  derived/    # 可重建索引
+  backups/    # 写入前备份
+  corrupted/  # 损坏文件隔离
+```
+
+内置题库仍随 `packages/content` 发布；本地学习数据只保存 `questionId` 和用户练习状
+态，不复制题目正文或答案。
+
 边界链路固定为：
 
 ```text
@@ -109,4 +123,5 @@ DTO / Raw Data
 
 ## 当前范围
 
-Phase 1 不做后端、登录、支付、VIP 授权、管理后台和私有商业题库内容。
+Phase 2 只做本地运行能力，不做远程后端、登录、支付、VIP 授权、管理后台、云同步和
+私有商业题库内容。

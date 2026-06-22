@@ -60,6 +60,17 @@ function isScorecardDataFile(file: string) {
   );
 }
 
+function isLocalDatabaseFile(file: string) {
+  return (
+    file.startsWith(".jiku-practice-kit/") ||
+    file.startsWith("jiku-study-data/") ||
+    file.startsWith("database/sessions/") ||
+    file.startsWith("database/attempts/") ||
+    file.startsWith("database/question-progress/") ||
+    file.startsWith("database/review-schedules/")
+  );
+}
+
 function containsPaidAnswerLeak(content: string) {
   return (
     /\b(?:paid|vip|premium)(?:Answer|_answer)\b/i.test(content) ||
@@ -80,6 +91,16 @@ function referencesScorecardData(content: string) {
   return (
     /(?:^|["'`/])scorecards\//.test(content) ||
     /(?:^|["'`/])(?:[^"'`/]*\.)?scorecard\.(?:json|md)\b/.test(content)
+  );
+}
+
+function referencesLocalDatabaseData(content: string) {
+  return (
+    content.includes(".jiku-practice-kit/") ||
+    content.includes("jiku-study-data/") ||
+    /(?:^|["'`/])database\/(?:sessions|attempts|question-progress|review-schedules)\//.test(
+      content
+    )
   );
 }
 
@@ -150,6 +171,10 @@ export function findArchitectureFailures(
 
     if (isScorecardDataFile(file)) {
       failures.push(`scorecard data file must stay out of git-visible files: ${file}`);
+    }
+
+    if (isLocalDatabaseFile(file)) {
+      failures.push(`local database file must stay out of git-visible files: ${file}`);
     }
 
     if (
@@ -282,7 +307,7 @@ export function findArchitectureFailures(
 
   for (const question of questions) {
     if (question.accessLevel !== "free") {
-      failures.push(`Phase 1 content must be free only: ${question.id}`);
+      failures.push(`question content must be free only: ${question.id}`);
     }
   }
 
@@ -297,6 +322,10 @@ export function findArchitectureFailures(
 
     if (referencesScorecardData(content)) {
       failures.push(`build output references scorecard data: ${file.path}`);
+    }
+
+    if (referencesLocalDatabaseData(content)) {
+      failures.push(`build output references local database data: ${file.path}`);
     }
 
     if (containsPaidAnswerLeak(content)) {

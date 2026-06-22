@@ -30,8 +30,11 @@ desktop。写代码或审查代码时使用 `@ponytail` 或 `@ponytail-review`�
 
 ## 边界
 
-- `packages/contracts` 是共享 schema 和核心类型的唯一来源。
+- `packages/contracts` 是共享 schema、核心类型和本地数据库合同的唯一来源。
 - `packages/content` 负责免费题库内容和内容加载。
 - `apps/web` 只能消费 contracts 和 content，不能重新定义核心模型。
-- 浏览器存储访问只能放在 `apps/web/src/features/scorecard/storage.ts`。
-- Phase 1 只允许 free 内容。
+- Phase 1 遗留浏览器 scorecard 存储只能放在
+  `apps/web/src/features/scorecard/storage.ts`；Phase 2 新增学习数据必须走本地 API
+  和固定目录，不再新增 `localStorage` 持久化。
+- 本地学习数据固定在 `~/.jiku-practice-kit/`，不得进入 git 可见文件。
+- 题库内容只允许 free 内容。
