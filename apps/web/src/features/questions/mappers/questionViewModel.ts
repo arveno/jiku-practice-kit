@@ -70,6 +70,7 @@ export function mapQuestionToViewModel(
 ): QuestionViewModel {
   return {
     id: question.id,
+    to: `/questions/${question.id}`,
     title: question.title,
     prompt: question.question,
     category: question.category,

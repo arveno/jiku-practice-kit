@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { RouterLink, useRoute, useRouter } from "vue-router";
 import { allQuestions } from "@jiku/content";
 import {
   deriveQuestionFilterOptions,
@@ -175,7 +175,9 @@ function eventValue(event: unknown) {
           <div class="question-card-header">
             <div>
               <span class="meta">{{ question.category }} / {{ question.topic }}</span>
-              <h2>{{ question.title }}</h2>
+              <RouterLink class="question-title-link" :to="question.to">
+                <h2>{{ question.title }}</h2>
+              </RouterLink>
             </div>
             <JkTag :type="question.frequencyTagType">{{
               question.frequencyLabel
@@ -287,6 +289,15 @@ h2 {
   font-size: 20px;
   font-weight: 600;
   line-height: 28px;
+}
+
+.question-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.question-title-link:hover h2 {
+  color: #0070f3;
 }
 
 .prompt {

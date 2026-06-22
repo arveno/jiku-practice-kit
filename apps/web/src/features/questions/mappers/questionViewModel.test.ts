@@ -39,6 +39,7 @@ describe("mapQuestionToViewModel", () => {
 
     expect(mapQuestionToViewModel(question, record)).toEqual({
       id: "typescript-structural-typing",
+      to: "/questions/typescript-structural-typing",
       title: "Explain TypeScript structural typing.",
       prompt: "Why does TypeScript use structural typing?",
       category: "TypeScript",
