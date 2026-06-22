@@ -8,6 +8,8 @@ coverage/
 !.env.example
 
 .local/
+.jiku-practice-kit/
+jiku-study-data/
 private/
 src/content/questions/private/
 packages/content/src/private/
