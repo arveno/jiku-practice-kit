@@ -8,3 +8,4 @@ export {
 } from "./questionFilters";
 export { isPassingScore } from "./questionScoring";
 export { getScorecardStats, type ScorecardStats } from "./scorecardStats";
+export { applySelfAssessment, type SelfAssessment } from "./selfAssessment";
