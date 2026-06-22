@@ -120,4 +120,34 @@ describe("createLocalDatabaseStore", () => {
     await expect(readdir(join(root, "database", "sessions"))).resolves.toEqual([]);
     expect(await readdir(join(root, "corrupted"))).toHaveLength(1);
   });
+
+  test("returns the latest active session", async () => {
+    const root = await createRoot();
+    const store = createLocalDatabaseStore({ root, now: () => new Date(timestamp) });
+
+    await store.writeSession(
+      createSession({
+        id: "old-active",
+        updatedAt: "2026-01-01T00:00:00.000Z"
+      })
+    );
+    await store.writeSession(
+      createSession({
+        id: "done",
+        status: "completed",
+        currentIndex: 1,
+        updatedAt: "2026-01-03T00:00:00.000Z"
+      })
+    );
+    await store.writeSession(
+      createSession({
+        id: "new-active",
+        updatedAt: "2026-01-02T00:00:00.000Z"
+      })
+    );
+
+    await expect(store.readActiveSession()).resolves.toMatchObject({
+      id: "new-active"
+    });
+  });
 });

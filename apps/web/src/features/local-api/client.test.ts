@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { readLocalApiStatus } from "./client";
+import type { StudySession } from "@jiku/contracts";
+import {
+  readActiveStudySession,
+  readLocalApiStatus,
+  writeStudySession
+} from "./client";
 
 function createResponse(body: unknown, ok = true) {
   return {
@@ -56,5 +61,65 @@ describe("readLocalApiStatus", () => {
       state: "unavailable",
       message: "本地服务未连接"
     });
+  });
+});
+
+describe("study session API", () => {
+  test("reads the active study session", async () => {
+    await expect(
+      readActiveStudySession(() =>
+        Promise.resolve(
+          createResponse({
+            id: "session-1",
+            schemaVersion: 1,
+            status: "active",
+            source: "question-filter",
+            questionIds: ["typescript-structural-typing"],
+            currentIndex: 0,
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z"
+          })
+        )
+      )
+    ).resolves.toMatchObject({
+      id: "session-1",
+      status: "active"
+    });
+
+    await expect(
+      readActiveStudySession(() =>
+        Promise.resolve(createResponse({ error: "not found" }, false))
+      )
+    ).resolves.toBeNull();
+  });
+
+  test("writes a study session by id", async () => {
+    const calls: { input: RequestInfo | URL; init: RequestInit | undefined }[] = [];
+    const session: StudySession = {
+      id: "session-1",
+      schemaVersion: 1,
+      status: "active",
+      source: "question-filter",
+      questionIds: ["typescript-structural-typing"],
+      currentIndex: 0,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z"
+    };
+
+    await writeStudySession(session, (input, init) => {
+      calls.push({ input, init });
+      return Promise.resolve(createResponse({ ok: true }));
+    });
+
+    expect(calls).toEqual([
+      {
+        input: "/api/sessions/session-1",
+        init: {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(session)
+        }
+      }
+    ]);
   });
 });
