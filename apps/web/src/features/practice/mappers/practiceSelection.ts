@@ -8,11 +8,13 @@ export type PracticeScope =
   | "high-frequency"
   | "weak"
   | "unpracticed"
-  | "low-score";
+  | "low-score"
+  | "question-ids";
 
 type PracticeSelectionInput = {
   scope: PracticeScope;
   value?: string;
+  questionIds?: string[];
   count: number;
   random?: () => number;
 };
@@ -41,6 +43,8 @@ function matchesScope(
   const record = scorecard.records[question.id];
 
   switch (input.scope) {
+    case "question-ids":
+      return input.questionIds?.includes(question.id) ?? false;
     case "category":
       return question.category === input.value;
     case "topic":
